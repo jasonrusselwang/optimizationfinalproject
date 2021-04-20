@@ -36,4 +36,5 @@ def graph_parameter(node_file="Nodes_Revised.csv", arc_file="Arcs.csv", commodit
     final_list = [commodity_quantity, nodes, arcs, commodity_source, commodity_sink, m_distance]
     return final_list
 if __name__ == "__main__":
-    print(graph_parameter())
+    data = graph_parameter()
+    print(data[2])
