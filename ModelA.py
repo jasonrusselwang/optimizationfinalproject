@@ -1,39 +1,64 @@
 from graph_parameter import graph_parameter
-from gurobipy import Model, GRB
+import gurobipy
 
-# data
-data = graph_parameter()
-# manipulate data here
-commodity_quantity, nodes, arcs, commodity_source, commodity_sink, m_distance = data
+graphparameter = graph_parameter()
 
-# initialize model
-m = gp.Model('ModelA')
+commodities = graphparameter[0]
+nodes = graphparameter[1]
+arcs = graphparameter[2]
+origin = graphparameter[3]
+destination = graphparameter[4]
+distance = graphparameter[5]
 
-# decision variables
-# question 1: x_a,k is determined while the model is being optimized, how should we write the variable here?
-x_ak = m.addVars(insert_variable_here, name="x_ak", vtype=GRB.BINARY)
-# question 1a: n_a is also calculated during the optimization process, how should we code this
-n_a = m.addVars(insert_variable_here, name="n_a", vtype=GRB.INTEGER, lb=0)
-# question 2: we have the cost (distance) for each head tail pair, should this just be the m_distance variable? {(arc pair): euclidean distance}
-m_a = m.addVars(m_distance, name="m_a")
-q_k = m.addVars(commodity_quantity, name="q_k")
-o_k = m.addVars(commodity_source, name="o_k")
-d_k = m.addVars(commodity_sink, name="q_k")
-# do all of these look ok? ^
 
-# constraints
-# question 1231242: how should we take the number of entering arcs and exiting arcs to find which label to put on the node for a specific path?
-# question cont.: Should we be iterating over each node or arc? Should we even have any form of iteration at all in the solution?
-# question: how do we count the number of arcs entering and exiting each node if that is something that the model is optimizing?
-node_labelling = m.addConstrs(, name="node_label")
-# not sure how to show the number of arcs entering and exiting each node
-num_trucks = m.addConstrs(, name="num_trucks")
-# objective function
-m.setObjective("m_a * n_a for all arcs", GRB.MINIMIZE)
-# need to figure out how to put that in actual math/code ^
+quantity = {}
+for j in commodities:
+	quantity[j] = float(commodities[j])
 
-# sample summation: (x.sum('*',j) == 1 for j in J)
-# ^ need more details on how this actually works
-# apologies for so many questions, thanks for the help!
+m = gurobipy.Model("m")
 
+x = {}
+for a in arcs:
+	x[a] = {}
+	for k in commodities:
+		x[a][k] = m.addVar(name = str((str(a),k)),vtype = gurobipy.GRB.BINARY)
+
+n = {}
+for a in arcs:
+	n[a] = m.addVar(name = str((str(a))),vtype = gurobipy.GRB.CONTINUOUS)
+
+objective = gurobipy.quicksum(distance[a] * n[a] for a in arcs)
+m.setObjective(objective, gurobipy.GRB.MINIMIZE)
+
+for k in commodities:
+	for node in nodes:
+		if node == origin[k]:
+			m.addConstr(gurobipy.quicksum(x[a][k] for a in arcs.select(node, "*")) - gurobipy.quicksum(x[a][k] for a in arcs.select("*", node)) == 1)
+		elif node == destination[k]:
+			m.addConstr(gurobipy.quicksum(x[a][k] for a in arcs.select(node, "*")) - gurobipy.quicksum(x[a][k] for a in arcs.select("*", node)) == -1)
+		else:
+			m.addConstr(gurobipy.quicksum(x[a][k] for a in arcs.select(node, "*")) - gurobipy.quicksum(x[a][k] for a in arcs.select("*", node)) == 0)
+
+for arc in arcs:
+	m.addConstr(n[arc] - gurobipy.quicksum(quantity[k] * x[arc][k] for k in commodities) >= 0)
+
+m.update()
 m.optimize()
+
+
+# Office Hours Sanity Check
+m.Params.MIPGap = 0.1
+m.Params.TimeLimit = 10
+
+# for a in arcs:
+# 	for k in commodities:
+# 		if x[a][k].x > 0.000001:
+# 			print(x[a][k].varName, x[a][k].x)
+
+# for a in arcs:
+# 	if n[a].x > 0.00001:
+# 			print(n[a].varName, n[a].x)
+
+# m.write("m.lp")
+
+# print(str(m.ObjVal))
