@@ -1,8 +1,11 @@
-# creation of the model and solving
+# same code as ModelA.py, writes a csv with the paths used and the number of trucks on each path
 from graph_parameter import graph_parameter
 import gurobipy
+import re
+import csv
+from ast import literal_eval
 
-# setup data
+# data
 graphparameter = graph_parameter()
 
 commodities = graphparameter[0]
@@ -25,18 +28,18 @@ x = {}
 for a in arcs:
 	x[a] = {}
 	for k in commodities:
-		x[a][k] = m.addVar(name = str((str(a),k)),vtype = gurobipy.GRB.BINARY)
+		x[a][k] = m.addVar(name = str((str(a),k)),vtype = gurobipy.GRB.BINARY) # continuous and binary
 
 # trucks
 n = {}
 for a in arcs:
-	n[a] = m.addVar(name = str((str(a))),vtype = gurobipy.GRB.CONTINUOUS)
+	n[a] = m.addVar(name = str((str(a))),vtype = gurobipy.GRB.INTEGER) # integer for extra credit problem
 
 # objective
 objective = gurobipy.quicksum(distance[a] * n[a] for a in arcs)
 m.setObjective(objective, gurobipy.GRB.MINIMIZE)
 
-# source, sink, or otherwise
+# source, sink, otherwise
 for k in commodities:
 	for node in nodes:
 		if node == origin[k]:
@@ -52,3 +55,19 @@ for arc in arcs:
 
 m.update()
 m.optimize()
+
+print('Runtime: ' + str(m.Runtime))
+
+# getting the list of arcs and trucks
+# finding the paths used and number of trucks
+arcTruck = []
+for a in arcs:
+	if round(n[a].x) > 0:
+		arcTruck.append((a, int(round(n[a].x))))
+# print(arcTruck)
+
+# writing list to csv to visualize in viz.py
+with open("output_arcs.csv", 'w') as file:
+	writer = csv.writer(file)
+	for path in arcTruck:
+		writer.writerow(path)

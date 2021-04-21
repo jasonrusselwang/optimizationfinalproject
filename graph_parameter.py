@@ -37,4 +37,4 @@ def graph_parameter(node_file="Nodes_Revised.csv", arc_file="Arcs.csv", commodit
     return final_list
 if __name__ == "__main__":
     data = graph_parameter()
-    print(data[2])
+    pprint(data)
